@@ -8,7 +8,7 @@ interface CodePanelProps {
 }
 
 export const CodePanel = ({ title, content, onCopy, emptyText }: CodePanelProps) => (
-  <Card className="h-full">
+  <Card className="h-screen">
     <div className="mb-4 flex items-center justify-between">
       <h3 className="text-lg font-semibold">{title}</h3>
       <button
@@ -20,7 +20,7 @@ export const CodePanel = ({ title, content, onCopy, emptyText }: CodePanelProps)
         Copy
       </button>
     </div>
-    <pre className="max-h-[210px] overflow-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-slate-100">
+    <pre className="h-[calc(100vh-7rem)] overflow-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-slate-100">
       {content || emptyText}
     </pre>
   </Card>
