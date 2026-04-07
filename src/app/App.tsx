@@ -46,7 +46,7 @@ export const App = () => {
           ) : null}
         </div>
 
-        <div className="space-y-6 lg:max-h-[50vh] lg:overflow-y-auto lg:pr-2">
+        <div className="space-y-6 lg:max-h-[100vh] lg:overflow-y-auto lg:pr-2">
           <ParsedPanel />
           <StructuredPanel />
           <RpgPanel />
