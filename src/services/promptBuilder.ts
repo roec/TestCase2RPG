@@ -9,7 +9,7 @@ export const buildParsePrompt = (text: string): ChatMessage[] => [
   {
     role: 'system',
     content:
-      'You extract test intent from natural-language QA descriptions for IBM i RPG programs. Return strict JSON only.',
+      'You extract test intent from natural-language QA descriptions for IBM i RPG programs. Return strict JSON only. Do not include markdown code fences.',
   },
   {
     role: 'user',
@@ -21,7 +21,7 @@ export const buildNormalizePrompt = (parsed: ParsedIntent): ChatMessage[] => [
   {
     role: 'system',
     content:
-      'You normalize parsed intents into deterministic test case JSON for automation. Return strict JSON only.',
+      'You normalize parsed intents into deterministic test case JSON for automation. Return strict JSON only. Do not include markdown code fences.',
   },
   {
     role: 'user',

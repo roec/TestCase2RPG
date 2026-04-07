@@ -16,7 +16,83 @@ interface DeepSeekResponse {
   error?: { message?: string };
 }
 
-const callWithTimeout = async (messages: ChatMessage[]): Promise<string> => {
+const isJsonLike = (value: string): boolean => {
+  const trimmed = value.trim();
+  return trimmed.startsWith('{') || trimmed.startsWith('[');
+};
+
+const stripMarkdownFences = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('```')) {
+    return trimmed;
+  }
+
+  return trimmed
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+};
+
+const extractFirstJsonObject = (value: string): string => {
+  const start = value.indexOf('{');
+  if (start === -1) {
+    return value;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < value.length; i += 1) {
+    const char = value[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+    }
+
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return value.slice(start, i + 1);
+      }
+    }
+  }
+
+  return value;
+};
+
+const toJsonPayload = (raw: string): string => {
+  const fenceStripped = stripMarkdownFences(raw);
+  if (isJsonLike(fenceStripped)) {
+    return fenceStripped;
+  }
+
+  return extractFirstJsonObject(fenceStripped).trim();
+};
+
+const callWithTimeout = async (
+  messages: ChatMessage[],
+  options?: { expectJson?: boolean },
+): Promise<string> => {
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
   if (!apiKey) {
     throw new Error('Missing VITE_DEEPSEEK_API_KEY environment variable.');
@@ -35,6 +111,7 @@ const callWithTimeout = async (messages: ChatMessage[]): Promise<string> => {
       body: JSON.stringify({
         model: MODEL,
         temperature: 0,
+        ...(options?.expectJson ? { response_format: { type: 'json_object' } } : {}),
         messages,
       }),
       signal: controller.signal,
@@ -62,12 +139,15 @@ const callWithTimeout = async (messages: ChatMessage[]): Promise<string> => {
   }
 };
 
-export const callDeepSeek = async (messages: ChatMessage[]): Promise<string> => {
+export const callDeepSeek = async (
+  messages: ChatMessage[],
+  options?: { expectJson?: boolean },
+): Promise<string> => {
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     try {
-      return await callWithTimeout(messages);
+      return await callWithTimeout(messages, options);
     } catch (error) {
       lastError = error;
       if (attempt < MAX_RETRIES) {
@@ -80,22 +160,26 @@ export const callDeepSeek = async (messages: ChatMessage[]): Promise<string> => 
 };
 
 const safeParseJson = <T>(raw: string, label: string): T => {
+  const candidate = toJsonPayload(raw);
+
   try {
-    return JSON.parse(raw) as T;
+    return JSON.parse(candidate) as T;
   } catch {
-    throw new Error(`${label} returned invalid JSON.`);
+    throw new Error(
+      `${label} returned invalid JSON. Please provide a clearer test description and try again.`,
+    );
   }
 };
 
 export const parseDescriptionToTestCase = async (text: string): Promise<ParsedIntent> => {
-  const response = await callDeepSeek(buildParsePrompt(text));
+  const response = await callDeepSeek(buildParsePrompt(text), { expectJson: true });
   return safeParseJson<ParsedIntent>(response, 'Parse Description');
 };
 
 export const normalizeStructuredTestCase = async (
   parsed: ParsedIntent,
 ): Promise<StructuredTestCase> => {
-  const response = await callDeepSeek(buildNormalizePrompt(parsed));
+  const response = await callDeepSeek(buildNormalizePrompt(parsed), { expectJson: true });
   return safeParseJson<StructuredTestCase>(response, 'Generate Structured Test Case');
 };
 
