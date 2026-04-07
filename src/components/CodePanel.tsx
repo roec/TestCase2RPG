@@ -20,7 +20,7 @@ export const CodePanel = ({ title, content, onCopy, emptyText }: CodePanelProps)
         Copy
       </button>
     </div>
-    <pre className="max-h-[420px] overflow-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-slate-100">
+    <pre className="max-h-[210px] overflow-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-slate-100">
       {content || emptyText}
     </pre>
   </Card>
